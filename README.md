@@ -1,5 +1,8 @@
 # Recall
 
+> [!WARNING]
+> This application is not safe to expose beyond a trusted local network yet. The main risk is that the app accepts arbitrary URLs, downloads them server-side with yt-dlp, and defaults to no authentication. That is fine for a private homelab but you should not run on a public machine.
+
 Recall is a local-first Go service for turning a video URL into a structured briefing. It downloads and extracts audio with `yt-dlp`/`ffmpeg`, sends the audio to a Whisper-compatible transcription endpoint, sends the transcript to an OpenAI-compatible chat endpoint, and stores the generated Markdown note and transcript in a database.
 
 The web UI at `/` lets you submit a video URL, add optional tags, watch job progress, view recent jobs, open generated note/transcript artefacts inline in the browser, redo either the note or the transcript, and delete jobs with their stored artefacts.
