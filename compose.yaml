@@ -1,0 +1,69 @@
+services:
+  recall:
+    build: .
+    ports:
+      - "8088:8080"
+    environment:
+      ADDR: ":8080"
+      DATA_DIR: "/data"
+      STORE_TYPE: "json"
+      DB_PATH: "/data/recall-db.json"
+      # For real multi-user deployments, switch to Postgres and enable OIDC.
+      # STORE_TYPE: "postgres"
+      # DATABASE_URL: "postgres://recall:recall@postgres:5432/recall?sslmode=disable"
+      # AUTH_MODE: "oidc"
+      # OIDC_ISSUER_URL: "https://accounts.google.com"
+      # OIDC_CLIENT_ID: "${OIDC_CLIENT_ID}"
+      # OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
+      # OIDC_REDIRECT_URL: "http://localhost:8088/auth/callback"
+      # SESSION_SECRET: "${SESSION_SECRET}"
+      # AUTH_ALLOWED_DOMAINS: "example.com"
+      TRANSCRIBER_TYPE: "openai"
+      WHISPER_BASE_URL: "http://whisper:9000"
+      LLM_BASE_URL: "https://api.openai.com/v1"
+      LLM_API_KEY: "${OPENAI_API_KEY}"
+      LLM_MODEL: "gpt-5.4-mini"
+      JOB_TIMEOUT_SECONDS: "3600"
+      # Optional escape hatch for YouTube breakages or authenticated videos.
+      # Use equals-style args because this env var is split on whitespace.
+      # YTDLP_EXTRA_ARGS: "--extractor-args=youtube:player_client=default,-tv --cookies=/data/cookies.txt"
+    volumes:
+      - recall-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    image: postgres:17
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: recall
+      POSTGRES_USER: recall
+      POSTGRES_PASSWORD: recall
+    volumes:
+      - recall-postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  whisper:
+    image: hwdsl2/whisper-server:latest
+    ports:
+      - "8000:9000"
+    volumes:
+      - whisper-models:/var/lib/whisper
+    environment:
+      WHISPER_MODEL: "small.en"
+      WHISPER_DIARIZATION: "true"
+      WHISPER_DIARIZE_NUM_SPEAKERS: "-1"
+      WHISPER_DIARIZE_MAX_SPEAKERS: "-1"
+      WHISPER_DIARIZE_THRESHOLD: "0.5"
+      WHISPER_WORD_TIMESTAMPS: "true"
+    restart: unless-stopped
+
+volumes:
+  recall-data:
+  recall-postgres:
+  whisper-models:

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Recall</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section id="auth-panel" class="auth-panel" hidden>
+        <div>
+          <strong id="auth-name"></strong>
+          <span id="auth-email"></span>
+        </div>
+        <a id="login-link" class="button-link" href="/auth/login" hidden>Log in</a>
+        <button id="logout" class="secondary" type="button" hidden>Log out</button>
+      </section>
+
+      <section class="panel">
+        <div class="heading">
+          <h1>Recall</h1>
+          <p>Local-first video briefings</p>
+        </div>
+        <form id="briefing-form" class="form">
+          <label>
+            Video URL
+            <input id="url" name="url" type="url" placeholder="https://example.com/video" required>
+          </label>
+          <label>
+            Tags
+            <input id="tags" name="tags" type="text" placeholder="cyber, kubernetes">
+          </label>
+          <button id="submit" type="submit">Create briefing</button>
+        </form>
+        <div id="message" class="message" role="status"></div>
+      </section>
+
+      <section class="panel">
+        <div class="heading row">
+          <div>
+            <h2>Jobs</h2>
+            <p>Generated notes and transcripts are stored in the local database.</p>
+          </div>
+          <button id="refresh" class="secondary" type="button">Refresh</button>
+        </div>
+        <div id="jobs" class="jobs"></div>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
