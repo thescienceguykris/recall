@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+
     outputs:
       new_tag: ${{ steps.new_tag.outputs.tag }}
 
@@ -25,18 +26,66 @@ jobs:
         run: |
           git fetch --tags
           LATEST=$(git tag -l 'v*' | sort -V | tail -1)
+
           if [ -z "$LATEST" ]; then
             LATEST="v0.0.0"
           fi
-          echo "tag=$LATEST" >> $GITHUB_OUTPUT
 
-      - name: Bump major version
+          echo "tag=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Work out version bump
+        id: bump
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          BUMP="patch"
+
+          if echo "$COMMIT_MESSAGE" | grep -Eiq '(\[major\]|BREAKING CHANGE|!:)' ; then
+            BUMP="major"
+          elif echo "$COMMIT_MESSAGE" | grep -Eiq '(\[minor\]|^feat(\(.+\))?:)' ; then
+            BUMP="minor"
+          elif echo "$COMMIT_MESSAGE" | grep -Eiq '(\[patch\]|\[fix\]|^fix(\(.+\))?:)' ; then
+            BUMP="patch"
+          fi
+
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "Selected bump: $BUMP"
+
+      - name: Bump version
         id: new_tag
         run: |
           LATEST="${{ steps.latest_tag.outputs.tag }}"
-          MAJOR=$(echo $LATEST | cut -d. -f1 | tr -d 'v')
-          NEW="v$((MAJOR + 1)).0.0"
-          echo "tag=$NEW" >> $GITHUB_OUTPUT
+          BUMP="${{ steps.bump.outputs.bump }}"
+
+          VERSION="${LATEST#v}"
+
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+          case "$BUMP" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+            *)
+              echo "Unknown bump type: $BUMP"
+              exit 1
+              ;;
+          esac
+
+          NEW="v${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "tag=$NEW" >> "$GITHUB_OUTPUT"
+          echo "New tag: $NEW"
 
       - name: Create tag and release
         uses: softprops/action-gh-release@v2
