@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+cd "$repo_root"
+
+printf 'Running Gitleaks pre-commit scan...\n'
+./scripts/run-gitleaks.sh
