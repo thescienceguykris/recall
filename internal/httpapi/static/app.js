@@ -5,6 +5,10 @@ const submit = document.querySelector("#submit");
 const message = document.querySelector("#message");
 const jobsEl = document.querySelector("#jobs");
 const refresh = document.querySelector("#refresh");
+const jobCount = document.querySelector("#job-count");
+const authGate = document.querySelector("#auth-gate");
+const heroPanel = document.querySelector("#hero-panel");
+const jobsPanel = document.querySelector("#jobs-panel");
 const authPanel = document.querySelector("#auth-panel");
 const authName = document.querySelector("#auth-name");
 const authEmail = document.querySelector("#auth-email");
@@ -15,6 +19,10 @@ let pollTimer = null;
 function setMessage(text, isError = false) {
   message.textContent = text;
   message.classList.toggle("error", isError);
+}
+
+function setJobCount(count) {
+  jobCount.textContent = `${count} ${count === 1 ? "job" : "jobs"}`;
 }
 
 function parseTags(value) {
@@ -50,13 +58,20 @@ async function loadJobs() {
   if (response.status === 401) {
     setMessage("Log in to view jobs.", true);
     jobsEl.innerHTML = "";
+    setJobCount(0);
     stopPolling();
     return;
   }
   const jobs = await response.json();
   jobsEl.innerHTML = "";
+  setJobCount(jobs.length);
   if (!jobs.length) {
-    jobsEl.innerHTML = `<div class="job-meta">No jobs yet.</div>`;
+    jobsEl.innerHTML = `
+      <div class="empty-state">
+        <strong>No briefings yet</strong>
+        Add a video URL above to start your first job.
+      </div>
+    `;
     stopPolling();
     return;
   }
@@ -77,10 +92,16 @@ async function loadJobs() {
     const deleteButton = `<button class="danger small" type="button" data-delete-job="${escapeHtml(job.id)}">Delete</button>`;
     const error = job.error ? `<div class="message error">${escapeHtml(job.error)}</div>` : "";
     const stage = job.stage || job.status || "queued";
+    const statusClass = statusClassName(job.status || stage);
     const message = job.message || stageLabel(stage);
     el.innerHTML = `
-      <div class="job-title">${escapeHtml(title)}</div>
-      <div class="job-meta">${escapeHtml(created)} · ${escapeHtml(job.source_url)}</div>
+      <div class="job-head">
+        <div>
+          <div class="job-title">${escapeHtml(title)}</div>
+          <div class="job-meta">${escapeHtml(created)} · ${escapeHtml(job.source_url)}</div>
+        </div>
+        <span class="status-pill ${statusClass}">${escapeHtml(job.status || stage)}</span>
+      </div>
       <div class="progress" aria-label="Job progress">
         ${renderSteps(stage)}
       </div>
@@ -100,8 +121,12 @@ async function loadJobs() {
 async function loadSession() {
   const response = await fetch("/api/me");
   const session = await response.json();
-  authPanel.hidden = !session.auth_enabled;
-  loginLink.hidden = !session.auth_enabled || session.authenticated;
+  const locked = session.auth_enabled && !session.authenticated;
+  authPanel.hidden = !session.auth_enabled || locked;
+  authGate.hidden = !locked;
+  heroPanel.hidden = locked;
+  jobsPanel.hidden = locked;
+  loginLink.hidden = !locked;
   logout.hidden = !session.auth_enabled || !session.authenticated;
   authName.textContent = "";
   authEmail.textContent = "";
@@ -109,8 +134,6 @@ async function loadSession() {
     authName.textContent = session.user.name || session.user.email || "Signed in";
     authEmail.textContent = session.user.email || "";
   }
-  form.hidden = session.auth_enabled && !session.authenticated;
-  refresh.disabled = session.auth_enabled && !session.authenticated;
   return session;
 }
 
@@ -174,6 +197,19 @@ function stageLabel(stage) {
   return found ? found[1] : stage;
 }
 
+function statusClassName(status) {
+  if (status === "complete" || status === "completed") {
+    return "complete";
+  }
+  if (status === "failed" || status === "error") {
+    return "failed";
+  }
+  if (status === "running" || status === "queued") {
+    return "running";
+  }
+  return "";
+}
+
 function startPolling() {
   if (pollTimer) {
     return;
@@ -227,6 +263,5 @@ loadSession()
     if (!session.auth_enabled || session.authenticated) {
       return loadJobs();
     }
-    setMessage("Log in to create and view briefings.");
   })
   .catch((error) => setMessage(error.message, true));

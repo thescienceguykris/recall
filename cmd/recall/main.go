@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := db.Init(context.Background()); err != nil {
+	if err := initStore(context.Background(), cfg, db); err != nil {
 		log.Fatal(err)
 	}
 	if _, err := db.EnsureUser(context.Background(), store.User{ID: store.LocalUserID, Provider: "local", ProviderSubject: store.LocalUserID, Name: "Local"}); err != nil {
@@ -70,6 +70,24 @@ func main() {
 
 	log.Printf("recall listening on %s", cfg.Addr)
 	log.Fatal(httpServer.ListenAndServe())
+}
+
+func initStore(ctx context.Context, cfg config.Config, db appStore) error {
+	const retryDelay = 2 * time.Second
+	for {
+		err := db.Init(ctx)
+		if err == nil {
+			return nil
+		}
+		if cfg.StoreType != "postgres" {
+			return err
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		log.Printf("postgres is not ready; retrying in %s: %v", retryDelay, err)
+		time.Sleep(retryDelay)
+	}
 }
 
 func buildStore(cfg config.Config) (appStore, error) {

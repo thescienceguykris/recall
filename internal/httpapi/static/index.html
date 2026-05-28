@@ -8,41 +8,63 @@
   </head>
   <body>
     <main class="shell">
-      <section id="auth-panel" class="auth-panel" hidden>
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Recall home">
+          <span class="brand-mark" aria-hidden="true">R</span>
+          <span>Recall</span>
+        </a>
+        <section id="auth-panel" class="auth-panel" hidden>
+          <div class="identity">
+            <strong id="auth-name"></strong>
+            <span id="auth-email"></span>
+          </div>
+          <button id="logout" class="secondary" type="button" hidden>Log out</button>
+        </section>
+      </header>
+
+      <section id="auth-gate" class="auth-gate" hidden>
         <div>
-          <strong id="auth-name"></strong>
-          <span id="auth-email"></span>
+          <p class="eyebrow">Private workspace</p>
+          <h1>Log in to use Recall.</h1>
+          <p class="lede">Your briefings, transcripts, and job history are available after authentication.</p>
         </div>
-        <a id="login-link" class="button-link" href="/auth/login" hidden>Log in</a>
-        <button id="logout" class="secondary" type="button" hidden>Log out</button>
+        <a id="login-link" class="button-link login-cta" href="/auth/login">Log in</a>
       </section>
 
-      <section class="panel">
-        <div class="heading">
-          <h1>Recall</h1>
-          <p>Local-first video briefings</p>
+      <section id="hero-panel" class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Local-first video briefings</p>
+          <h1>Turn long videos into usable notes.</h1>
+          <p class="lede">Submit a video URL, track each processing stage, and open the generated transcript or briefing from one focused workspace.</p>
         </div>
-        <form id="briefing-form" class="form">
+        <form id="briefing-form" class="form submit-card">
+          <div class="form-heading">
+            <h2>New briefing</h2>
+            <span class="form-kicker">URL to notes</span>
+          </div>
           <label>
-            Video URL
+            <span>Video URL</span>
             <input id="url" name="url" type="url" placeholder="https://example.com/video" required>
           </label>
           <label>
-            Tags
+            <span>Tags</span>
             <input id="tags" name="tags" type="text" placeholder="cyber, kubernetes">
           </label>
           <button id="submit" type="submit">Create briefing</button>
+          <div id="message" class="message" role="status"></div>
         </form>
-        <div id="message" class="message" role="status"></div>
       </section>
 
-      <section class="panel">
+      <section id="jobs-panel" class="panel">
         <div class="heading row">
           <div>
             <h2>Jobs</h2>
             <p>Generated notes and transcripts are stored in the local database.</p>
           </div>
-          <button id="refresh" class="secondary" type="button">Refresh</button>
+          <div class="job-toolbar">
+            <span id="job-count" class="count-pill">0 jobs</span>
+            <button id="refresh" class="secondary" type="button">Refresh</button>
+          </div>
         </div>
         <div id="jobs" class="jobs"></div>
       </section>
