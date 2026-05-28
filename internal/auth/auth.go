@@ -23,6 +23,7 @@ import (
 const (
 	sessionCookie = "recall_session"
 	stateCookie   = "recall_oauth_state"
+	pkceCookie    = "recall_oauth_pkce"
 	sessionMaxAge = 7 * 24 * time.Hour
 )
 
@@ -129,6 +130,7 @@ func (o *OIDC) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not start login", http.StatusInternalServerError)
 		return
 	}
+	verifier := oauth2.GenerateVerifier()
 	http.SetCookie(w, &http.Cookie{
 		Name:     stateCookie,
 		Value:    state,
@@ -138,7 +140,16 @@ func (o *OIDC) Login(w http.ResponseWriter, r *http.Request) {
 		Secure:   o.secureCookies,
 		SameSite: http.SameSiteLaxMode,
 	})
-	http.Redirect(w, r, o.oauth.AuthCodeURL(state), http.StatusFound)
+	http.SetCookie(w, &http.Cookie{
+		Name:     pkceCookie,
+		Value:    verifier,
+		Path:     "/",
+		MaxAge:   int((10 * time.Minute).Seconds()),
+		HttpOnly: true,
+		Secure:   o.secureCookies,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, o.oauth.AuthCodeURL(state, oauth2.S256ChallengeOption(verifier)), http.StatusFound)
 }
 
 func (o *OIDC) Callback(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +159,12 @@ func (o *OIDC) Callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid oauth state", http.StatusBadRequest)
 		return
 	}
-	token, err := o.oauth.Exchange(r.Context(), r.URL.Query().Get("code"))
+	pkceVerifierCookie, err := r.Cookie(pkceCookie)
+	if err != nil || pkceVerifierCookie.Value == "" {
+		http.Error(w, "missing oauth verifier", http.StatusBadRequest)
+		return
+	}
+	token, err := o.oauth.Exchange(r.Context(), r.URL.Query().Get("code"), oauth2.VerifierOption(pkceVerifierCookie.Value))
 	if err != nil {
 		http.Error(w, "oauth exchange failed", http.StatusBadGateway)
 		return
@@ -208,11 +224,13 @@ func (o *OIDC) Callback(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.SetCookie(w, &http.Cookie{Name: stateCookie, Path: "/", MaxAge: -1, HttpOnly: true, Secure: o.secureCookies, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: pkceCookie, Path: "/", MaxAge: -1, HttpOnly: true, Secure: o.secureCookies, SameSite: http.SameSiteLaxMode})
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func (o *OIDC) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Path: "/", MaxAge: -1, HttpOnly: true, Secure: o.secureCookies, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: pkceCookie, Path: "/", MaxAge: -1, HttpOnly: true, Secure: o.secureCookies, SameSite: http.SameSiteLaxMode})
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 

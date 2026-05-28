@@ -8,7 +8,7 @@ services:
       DATA_DIR: "/data"
       # For real multi-user deployments, switch to Postgres and enable OIDC.
       STORE_TYPE: "postgres"
-      DATABASE_URL: "postgres://recall:recall@postgres:5432/recall?sslmode=disable"
+      DATABASE_URL: "postgres://recall:${POSTGRES_PASSWORD}@postgres:5432/recall?sslmode=disable"
       AUTH_MODE: "oidc"
       OIDC_ISSUER_URL: "${OIDC_ISSUER_URL}"
       OIDC_CLIENT_ID: "${OIDC_CLIENT_ID}"
