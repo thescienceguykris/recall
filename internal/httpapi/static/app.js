@@ -93,6 +93,7 @@ async function loadJobs() {
     const error = job.error ? `<div class="message error">${escapeHtml(job.error)}</div>` : "";
     const stage = job.stage || job.status || "queued";
     const statusClass = statusClassName(job.status || stage);
+    const progress = progressState(stage);
     const message = job.message || stageLabel(stage);
     el.innerHTML = `
       <div class="job-head">
@@ -102,8 +103,14 @@ async function loadJobs() {
         </div>
         <span class="status-pill ${statusClass}">${escapeHtml(job.status || stage)}</span>
       </div>
-      <div class="progress" aria-label="Job progress">
-        ${renderSteps(stage)}
+      <div class="job-progress" aria-label="Job progress">
+        <div class="progress-copy">
+          <span>${escapeHtml(progress.label)}</span>
+          <span>${escapeHtml(progress.detail)}</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <span class="${statusClass}" style="width: ${progress.percent}%"></span>
+        </div>
       </div>
       <div class="job-status">${escapeHtml(message)}</div>
       <div class="links">${note}${transcript}${redoSummaryButton}${redoTranscriptButton}${deleteButton}</div>
@@ -176,14 +183,6 @@ const steps = [
   ["complete", "Complete"],
 ];
 
-function renderSteps(stage) {
-  const current = stageIndex(stage);
-  return steps.map(([key, label], index) => {
-    const state = stage === "failed" ? "failed" : index < current ? "done" : index === current ? "current" : "pending";
-    return `<span class="step ${state}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
-  }).join("");
-}
-
 function stageIndex(stage) {
   const index = steps.findIndex(([key]) => key === stage);
   if (stage === "failed") {
@@ -195,6 +194,20 @@ function stageIndex(stage) {
 function stageLabel(stage) {
   const found = steps.find(([key]) => key === stage);
   return found ? found[1] : stage;
+}
+
+function progressState(stage) {
+  if (stage === "failed") {
+    return { label: "Failed", detail: "Needs attention", percent: 100 };
+  }
+  const current = stageIndex(stage);
+  const total = steps.length - 1;
+  const percent = Math.max(8, Math.round((current / total) * 100));
+  return {
+    label: stageLabel(stage),
+    detail: current >= total ? "Complete" : `Step ${current + 1} of ${steps.length}`,
+    percent,
+  };
 }
 
 function statusClassName(status) {
