@@ -6,25 +6,29 @@ services:
     environment:
       ADDR: ":8080"
       DATA_DIR: "/data"
-      # For real multi-user deployments, switch to Postgres and enable OIDC.
-      STORE_TYPE: "postgres"
-      DATABASE_URL: "postgres://recall:${POSTGRES_PASSWORD}@postgres:5432/recall?sslmode=disable"
-      AUTH_MODE: "oidc"
-      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL}"
-      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID}"
-      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
-      OIDC_REDIRECT_URL: "${OIDC_REDIRECT_URL}"
-      SESSION_SECRET: "${SESSION_SECRET}"
-      #AUTH_ALLOWED_DOMAINS: "example.com"
+      # Defaults are suitable for a trusted local network. For multi-user
+      # deployments, set STORE_TYPE=postgres and AUTH_MODE=oidc in .env, then
+      # start with: docker compose --profile postgres up --build
+      STORE_TYPE: "${STORE_TYPE:-json}"
+      DB_PATH: "/data/recall-db.json"
+      DATABASE_URL: "${DATABASE_URL:-postgres://recall:recall@postgres:5432/recall?sslmode=disable}"
+      AUTH_MODE: "${AUTH_MODE:-none}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      OIDC_REDIRECT_URL: "${OIDC_REDIRECT_URL:-}"
+      SESSION_SECRET: "${SESSION_SECRET:-}"
+      AUTH_ALLOWED_EMAILS: "${AUTH_ALLOWED_EMAILS:-}"
+      AUTH_ALLOWED_DOMAINS: "${AUTH_ALLOWED_DOMAINS:-}"
       TRANSCRIBER_TYPE: "openai"
       WHISPER_BASE_URL: "http://whisper:9000"
-      LLM_BASE_URL: "https://api.openai.com/v1"
-      LLM_API_KEY: "${OPENAI_API_KEY}"
-      LLM_MODEL: "gpt-5.4-mini"
+      LLM_BASE_URL: "${LLM_BASE_URL}"
+      LLM_API_KEY: "${LLM_API_KEY:-}"
+      LLM_MODEL: "${LLM_MODEL}"
       JOB_TIMEOUT_SECONDS: "3600"
+      YTDLP_EXTRA_ARGS: "${YTDLP_EXTRA_ARGS:-}"
       # Optional escape hatch for YouTube breakages or authenticated videos.
       # Use equals-style args because this env var is split on whitespace.
-      # YTDLP_EXTRA_ARGS: "--extractor-args=youtube:player_client=default,-tv --cookies=/data/cookies.txt"
     volumes:
       - recall-data:/data
     read_only: true
@@ -41,7 +45,7 @@ services:
     environment:
       POSTGRES_DB: recall
       POSTGRES_USER: recall
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-recall}"
     volumes:
       - recall-postgres:/var/lib/postgresql/data
     healthcheck:

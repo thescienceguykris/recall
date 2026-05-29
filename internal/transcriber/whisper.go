@@ -24,6 +24,24 @@ type WhisperClient struct {
 	HTTPClient *http.Client
 }
 
+func (c WhisperClient) Check(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(c.BaseURL, "/")+"/v1/audio/transcriptions", nil)
+	if err != nil {
+		return err
+	}
+	client := c.HTTPClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("check whisper endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4<<10))
+	return nil
+}
+
 func (c WhisperClient) Transcribe(ctx context.Context, audioPath string) (transcript.Result, error) {
 	file, err := os.Open(audioPath)
 	if err != nil {

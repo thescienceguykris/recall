@@ -26,6 +26,18 @@ type WyomingClient struct {
 	Language string
 }
 
+func (c WyomingClient) Check(ctx context.Context) error {
+	if strings.TrimSpace(c.Addr) == "" {
+		return fmt.Errorf("wyoming whisper address is required")
+	}
+	dialer := net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", c.Addr)
+	if err != nil {
+		return fmt.Errorf("connect to wyoming whisper %s: %w", c.Addr, err)
+	}
+	return conn.Close()
+}
+
 func (c WyomingClient) Transcribe(ctx context.Context, audioPath string) (transcript.Result, error) {
 	if strings.TrimSpace(c.Addr) == "" {
 		return transcript.Result{}, fmt.Errorf("wyoming whisper address is required")

@@ -51,6 +51,9 @@ func main() {
 
 	client := &http.Client{Timeout: cfg.JobTimeout}
 	transcriberClient := buildTranscriber(cfg, client)
+	if err := waitForTranscriber(context.Background(), transcriberClient); err != nil {
+		log.Fatal(err)
+	}
 	runner := jobs.Runner{
 		DataDir:     cfg.DataDir,
 		Downloader:  downloader.YTDLPDownloader{ExtraArgs: cfg.YTDLPExtraArgs},
@@ -116,4 +119,31 @@ func buildTranscriber(cfg config.Config, client *http.Client) transcriber.Transc
 		}
 	}
 	return transcriber.WhisperClient{BaseURL: cfg.WhisperBaseURL, HTTPClient: client}
+}
+
+func waitForTranscriber(ctx context.Context, client transcriber.Transcriber) error {
+	const (
+		startupTimeout = time.Minute
+		attemptTimeout = 10 * time.Second
+		retryDelay     = 2 * time.Second
+	)
+	deadline := time.Now().Add(startupTimeout)
+	for {
+		attemptCtx, cancel := context.WithTimeout(ctx, attemptTimeout)
+		err := transcriber.Check(attemptCtx, client)
+		cancel()
+		if err == nil {
+			log.Print("transcriber health check passed")
+			return nil
+		}
+		if time.Now().Add(retryDelay).After(deadline) {
+			return err
+		}
+		log.Printf("transcriber is not ready; retrying in %s: %v", retryDelay, err)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(retryDelay):
+		}
+	}
 }
